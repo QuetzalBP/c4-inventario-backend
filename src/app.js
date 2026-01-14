@@ -16,7 +16,9 @@ const app = express()
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "c4controlinventario.netlify.app"
+    "c4controlinventario.netlify.app",
+    'https://c4controlinventario.netlify.app',
+    'https://c4controlinventario.netlify.app/login'
   ],
   credentials: true
 }))
