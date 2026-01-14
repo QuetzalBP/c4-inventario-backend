@@ -47,7 +47,7 @@ router.get("/code/:productId", auth(), async (req, res) => {
   }
 })
 
-// Crear producto (solo ADMIN) - CON USUARIO
+// Crear producto (solo ADMIN) - CON VALIDACIÓN DE DATOS
 router.post("/", auth(["ADMIN"]), async (req, res) => {
   try {
     const { 
@@ -56,8 +56,8 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
       brand, 
       model, 
       serialNumber, 
-      status = 'Bodega', 
-      quantity = 1,
+      status, 
+      quantity,
       price, 
       category,
       notes,
@@ -66,30 +66,38 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
       warrantyExpiry
     } = req.body
 
-    // Generar ID único si no se proporciona
+    // Generar ID único
     const productId = generateProductId()
     
-    // === AGREGADO: Obtener usuario del middleware de autenticación ===
-    // Asumiendo que tu middleware `auth` agrega req.user
+    // Obtener usuario del middleware de autenticación
     const createdBy = req.user?.username || req.user?.email || 'admin'
 
-    const product = await Product.create({
+    // 🔧 LIMPIAR Y VALIDAR DATOS
+    const cleanData = {
       productId,
       name,
-      description,
-      brand,
-      model,
-      serialNumber,
-      status,
-      quantity,
-      price,
-      category,
-      notes,
-      location,
-      purchaseDate,
-      warrantyExpiry,
-      createdBy // ← Guardar quién creó el producto
-    })
+      description: description || null,
+      brand: brand || null,
+      model: model || null,
+      serialNumber: serialNumber || null,
+      status: status || 'Bodega',
+      quantity: quantity ? parseInt(quantity) : 0,
+      // 👇 CONVERTIR STRINGS VACÍOS A NULL PARA CAMPOS NUMÉRICOS
+      price: price && price !== '' && price !== 'NaN' ? parseFloat(price) : null,
+      category: category && category !== '' ? category : null,
+      notes: notes || null,
+      location: location || null,
+      // 👇 VALIDAR FECHAS
+      purchaseDate: purchaseDate && purchaseDate !== 'Invalid date' && purchaseDate !== '' 
+        ? new Date(purchaseDate) 
+        : null,
+      warrantyExpiry: warrantyExpiry && warrantyExpiry !== 'Invalid date' && warrantyExpiry !== '' 
+        ? new Date(warrantyExpiry) 
+        : null,
+      createdBy
+    }
+
+    const product = await Product.create(cleanData)
 
     res.status(201).json(product)
   } catch (error) {
@@ -101,7 +109,7 @@ router.post("/", auth(["ADMIN"]), async (req, res) => {
   }
 })
 
-// Actualizar producto (solo ADMIN) - CON USUARIO
+// Actualizar producto (solo ADMIN) - CON VALIDACIÓN
 router.put("/:id", auth(["ADMIN"]), async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id)
@@ -124,32 +132,33 @@ router.put("/:id", auth(["ADMIN"]), async (req, res) => {
       purchaseDate,
       warrantyExpiry
     } = req.body
-    
-    // Validación de unicidad (opcional)
-    if (name !== product.name || brand !== product.brand || 
-        model !== product.model || serialNumber !== product.serialNumber) {
-      // Tu lógica de validación aquí...
-    }
 
-    // === AGREGADO: Obtener usuario que está actualizando ===
+    // Obtener usuario que está actualizando
     const updatedBy = req.user?.username || req.user?.email || 'admin'
 
-    await product.update({
+    // 🔧 LIMPIAR Y VALIDAR DATOS
+    const cleanData = {
       name,
-      description,
-      brand,
-      model,
-      serialNumber,
-      status,
-      quantity,
-      price,
-      category,
-      notes,
-      location,
-      purchaseDate,
-      warrantyExpiry,
-      updatedBy // ← Guardar quién actualizó el producto
-    })
+      description: description || null,
+      brand: brand || null,
+      model: model || null,
+      serialNumber: serialNumber || null,
+      status: status || 'Bodega',
+      quantity: quantity ? parseInt(quantity) : 0,
+      price: price && price !== '' && price !== 'NaN' ? parseFloat(price) : null,
+      category: category && category !== '' ? category : null,
+      notes: notes || null,
+      location: location || null,
+      purchaseDate: purchaseDate && purchaseDate !== 'Invalid date' && purchaseDate !== '' 
+        ? new Date(purchaseDate) 
+        : null,
+      warrantyExpiry: warrantyExpiry && warrantyExpiry !== 'Invalid date' && warrantyExpiry !== '' 
+        ? new Date(warrantyExpiry) 
+        : null,
+      updatedBy
+    }
+
+    await product.update(cleanData)
 
     res.json(product)
   } catch (error) {
